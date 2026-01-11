@@ -1,87 +1,194 @@
-# LLM Council
+# Ralph (Claude Code Edition)
 
-![llmcouncil](header.jpg)
+![Ralph](ralph.webp)
 
-The idea of this repo is that instead of asking a question to your favorite LLM provider (e.g. OpenAI GPT 5.1, Google Gemini 3.0 Pro, Anthropic Claude Sonnet 4.5, xAI Grok 4, eg.c), you can group them into your "LLM Council". This repo is a simple, local web app that essentially looks like ChatGPT except it uses OpenRouter to send your query to multiple LLMs, it then asks them to review and rank each other's work, and finally a Chairman LLM produces the final response.
+Ralph is an autonomous AI agent loop that runs [Claude Code](https://docs.anthropic.com/en/docs/claude-code) repeatedly until all PRD items are complete. Each iteration is a fresh Claude Code instance with clean context. Memory persists via git history, `progress.txt`, and `prd.json`.
 
-In a bit more detail, here is what happens when you submit a query:
+Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 
-1. **Stage 1: First opinions**. The user query is given to all LLMs individually, and the responses are collected. The individual responses are shown in a "tab view", so that the user can inspect them all one by one.
-2. **Stage 2: Review**. Each individual LLM is given the responses of the other LLMs. Under the hood, the LLM identities are anonymized so that the LLM can't play favorites when judging their outputs. The LLM is asked to rank them in accuracy and insight.
-3. **Stage 3: Final response**. The designated Chairman of the LLM Council takes all of the model's responses and compiles them into a single final answer that is presented to the user.
+## Prerequisites
 
-## Vibe Code Alert
-
-This project was 99% vibe coded as a fun Saturday hack because I wanted to explore and evaluate a number of LLMs side by side in the process of [reading books together with LLMs](https://x.com/karpathy/status/1990577951671509438). It's nice and useful to see multiple responses side by side, and also the cross-opinions of all LLMs on each other's outputs. I'm not going to support it in any way, it's provided here as is for other people's inspiration and I don't intend to improve it. Code is ephemeral now and libraries are over, ask your LLM to change it in whatever way you like.
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
+- `jq` installed (`brew install jq` on macOS, `choco install jq` on Windows)
+- A git repository for your project
 
 ## Setup
 
-### 1. Install Dependencies
+### Option 1: Copy to your project
 
-The project uses [uv](https://docs.astral.sh/uv/) for project management.
+Copy the ralph files into your project:
 
-**Backend:**
 ```bash
-uv sync
+# From your project root
+mkdir -p scripts/ralph
+cp /path/to/ralph/ralph.sh scripts/ralph/
+cp /path/to/ralph/prompt.md scripts/ralph/
+chmod +x scripts/ralph/ralph.sh
 ```
 
-**Frontend:**
+### Option 2: Install skills globally
+
+Copy the skills to your Claude Code config for use across all projects:
+
 ```bash
-cd frontend
+cp -r skills/prd ~/.claude/skills/
+cp -r skills/ralph ~/.claude/skills/
+```
+
+### Configure Claude Code auto-handoff (recommended)
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "autoHandoff": { "context": 90 }
+}
+```
+
+This enables automatic handoff when context fills up, allowing Ralph to handle large stories that exceed a single context window.
+
+## Workflow
+
+### 1. Create a PRD
+
+Use the PRD skill to generate a detailed requirements document:
+
+```
+Load the prd skill and create a PRD for [your feature description]
+```
+
+Answer the clarifying questions. The skill saves output to `tasks/prd-[feature-name].md`.
+
+### 2. Convert PRD to Ralph format
+
+Use the Ralph skill to convert the markdown PRD to JSON:
+
+```
+Load the ralph skill and convert tasks/prd-[feature-name].md to prd.json
+```
+
+This creates `prd.json` with user stories structured for autonomous execution.
+
+### 3. Run Ralph
+
+```bash
+./scripts/ralph/ralph.sh [max_iterations]
+```
+
+Default is 10 iterations.
+
+Ralph will:
+1. Create a feature branch (from PRD `branchName`)
+2. Pick the highest priority story where `passes: false`
+3. Implement that single story
+4. Run quality checks (typecheck, tests)
+5. Commit if checks pass
+6. Update `prd.json` to mark story as `passes: true`
+7. Append learnings to `progress.txt`
+8. Repeat until all stories pass or max iterations reached
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `ralph.sh` | The bash loop that spawns fresh Claude Code instances |
+| `prompt.md` | Instructions given to each Claude Code instance |
+| `prd.json` | User stories with `passes` status (the task list) |
+| `prd.json.example` | Example PRD format for reference |
+| `progress.txt` | Append-only learnings for future iterations |
+| `skills/prd/` | Skill for generating PRDs |
+| `skills/ralph/` | Skill for converting PRDs to JSON |
+| `flowchart/` | Interactive visualization of how Ralph works |
+
+## Flowchart
+
+[![Ralph Flowchart](ralph-flowchart.png)](https://snarktank.github.io/ralph/)
+
+**[View Interactive Flowchart](https://snarktank.github.io/ralph/)** - Click through to see each step with animations.
+
+The `flowchart/` directory contains the source code. To run locally:
+
+```bash
+cd flowchart
 npm install
-cd ..
-```
-
-### 2. Configure API Key
-
-Create a `.env` file in the project root:
-
-```bash
-OPENROUTER_API_KEY=sk-or-v1-...
-```
-
-Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purchase the credits you need, or sign up for automatic top up.
-
-### 3. Configure Models (Optional)
-
-Edit `backend/config.py` to customize the council:
-
-```python
-COUNCIL_MODELS = [
-    "openai/gpt-5.1",
-    "google/gemini-3-pro-preview",
-    "anthropic/claude-sonnet-4.5",
-    "x-ai/grok-4",
-]
-
-CHAIRMAN_MODEL = "google/gemini-3-pro-preview"
-```
-
-## Running the Application
-
-**Option 1: Use the start script**
-```bash
-./start.sh
-```
-
-**Option 2: Run manually**
-
-Terminal 1 (Backend):
-```bash
-uv run python -m backend.main
-```
-
-Terminal 2 (Frontend):
-```bash
-cd frontend
 npm run dev
 ```
 
-Then open http://localhost:5173 in your browser.
+## Critical Concepts
 
-## Tech Stack
+### Each Iteration = Fresh Context
 
-- **Backend:** FastAPI (Python 3.10+), async httpx, OpenRouter API
-- **Frontend:** React + Vite, react-markdown for rendering
-- **Storage:** JSON files in `data/conversations/`
-- **Package Management:** uv for Python, npm for JavaScript
+Each iteration spawns a **new Claude Code instance** with clean context. The only memory between iterations is:
+- Git history (commits from previous iterations)
+- `progress.txt` (learnings and context)
+- `prd.json` (which stories are done)
+
+### Small Tasks
+
+Each PRD item should be small enough to complete in one context window. If a task is too big, the LLM runs out of context before finishing and produces poor code.
+
+Right-sized stories:
+- Add a database column and migration
+- Add a UI component to an existing page
+- Update a server action with new logic
+- Add a filter dropdown to a list
+
+Too big (split these):
+- "Build the entire dashboard"
+- "Add authentication"
+- "Refactor the API"
+
+### CLAUDE.md Updates Are Critical
+
+After each iteration, Ralph updates the relevant `CLAUDE.md` files with learnings. This is key because Claude Code automatically reads these files, so future iterations (and future human developers) benefit from discovered patterns, gotchas, and conventions.
+
+Examples of what to add to CLAUDE.md:
+- Patterns discovered ("this codebase uses X for Y")
+- Gotchas ("do not forget to update Z when changing W")
+- Useful context ("the settings panel is in component X")
+
+### Feedback Loops
+
+Ralph only works if there are feedback loops:
+- Typecheck catches type errors
+- Tests verify behavior
+- CI must stay green (broken code compounds across iterations)
+
+### Browser Verification for UI Stories
+
+Frontend stories must include "Verify in browser" in acceptance criteria. Ralph will use browser tools to navigate to the page, interact with the UI, and confirm changes work.
+
+### Stop Condition
+
+When all stories have `passes: true`, Ralph outputs `<promise>COMPLETE</promise>` and the loop exits.
+
+## Debugging
+
+Check current state:
+
+```bash
+# See which stories are done
+cat prd.json | jq '.userStories[] | {id, title, passes}'
+
+# See learnings from previous iterations
+cat progress.txt
+
+# Check git history
+git log --oneline -10
+```
+
+## Customizing prompt.md
+
+Edit `prompt.md` to customize Ralph's behavior for your project:
+- Add project-specific quality check commands
+- Include codebase conventions
+- Add common gotchas for your stack
+
+## Archiving
+
+Ralph automatically archives previous runs when you start a new feature (different `branchName`). Archives are saved to `archive/YYYY-MM-DD-feature-name/`.
+
+## References
+
+- [Geoffrey Huntley's Ralph article](https://ghuntley.com/ralph/)
+- [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code)

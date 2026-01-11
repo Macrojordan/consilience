@@ -1,21 +1,10 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+# Ralph working files (generated during runs)
+prd.json
+progress.txt
+.last-branch
 
-# Virtual environments
-.venv
+# Archive is optional to commit
+# archive/
 
-# Keys and secrets
-.env
-
-# Data files
-data/
-
-# Frontend
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
+# OS files
+.DS_Store
