@@ -1,0 +1,20 @@
+.stage1_5 {
+  background: #fff9f0;
+  border-color: #ffd699;
+}
+
+.stage1_5 .stage-title {
+  color: #e67e22;
+}
+
+.stage-description {
+  color: #666;
+  font-size: 14px;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.critique-text {
+  color: #333;
+  line-height: 1.6;
+}
