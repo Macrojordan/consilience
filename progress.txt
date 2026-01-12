@@ -67,3 +67,19 @@ Started: Sun, Jan 11, 2026  8:20:04 PM
   - The streaming endpoint emits stage1_5_start and stage1_5_complete events for real-time UI updates
   - run_full_council now returns a 5-tuple: (stage1, stage1_5, stage2, stage3, metadata)
 ---
+## 2026-01-11 22:00:00 - US-005
+- Implemented frontend state management for Stage 1.5 cross-examination events
+- Added stage1_5 field to assistantMessage object structure in App.jsx
+- Added loading.stage1_5 to track stage 1.5 loading state
+- Implemented stage1_5_start event handler to set loading flag
+- Implemented stage1_5_complete event handler to store data and clear loading flag
+- Files changed: frontend/src/App.jsx
+- **Learnings for future iterations:**
+  - The assistantMessage object structure maintains parallel state fields for each stage (stage1, stage1_5, stage2, stage3)
+  - Loading states track each stage independently in the loading object
+  - SSE event handlers follow a consistent pattern: _start sets loading flag, _complete stores data and clears flag
+  - Frontend properly receives and handles stage1_5_start and stage1_5_complete events emitted by backend
+  - State updates use functional setState to ensure proper handling of concurrent updates
+  - Frontend dev server runs on port 5001 (5000 was in use), backend on port 8000
+  - Backend must be run from project root as: ./backend/venv/Scripts/uvicorn.exe backend.main:app
+---
