@@ -86,11 +86,13 @@ function App() {
       const assistantMessage = {
         role: 'assistant',
         stage1: null,
+        stage1_5: null,
         stage2: null,
         stage3: null,
         metadata: null,
         loading: {
           stage1: false,
+          stage1_5: false,
           stage2: false,
           stage3: false,
         },
@@ -120,6 +122,25 @@ function App() {
               const lastMsg = messages[messages.length - 1];
               lastMsg.stage1 = event.data;
               lastMsg.loading.stage1 = false;
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_5_start':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              lastMsg.loading.stage1_5 = true;
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_5_complete':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              lastMsg.stage1_5 = event.data;
+              lastMsg.loading.stage1_5 = false;
               return { ...prev, messages };
             });
             break;

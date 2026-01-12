@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Stage1 from './Stage1';
+import Stage1_5 from './Stage1_5';
 import Stage2 from './Stage2';
 import Stage3 from './Stage3';
 import './ChatInterface.css';
@@ -80,6 +81,15 @@ export default function ChatInterface({
                     </div>
                   )}
                   {msg.stage1 && <Stage1 responses={msg.stage1} />}
+
+                  {/* Stage 1.5 */}
+                  {msg.loading?.stage1_5 && (
+                    <div className="stage-loading">
+                      <div className="spinner"></div>
+                      <span>Running Stage 1.5: Cross-examination...</span>
+                    </div>
+                  )}
+                  {msg.stage1_5 && <Stage1_5 critiques={msg.stage1_5} />}
 
                   {/* Stage 2 */}
                   {msg.loading?.stage2 && (

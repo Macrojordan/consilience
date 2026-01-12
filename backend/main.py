@@ -10,7 +10,7 @@ import json
 import asyncio
 
 from . import storage
-from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
+from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage1_5_cross_examination, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
 
 app = FastAPI(title="LLM Council API")
 
@@ -110,8 +110,8 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         title = await generate_conversation_title(request.content)
         storage.update_conversation_title(conversation_id, title)
 
-    # Run the 3-stage council process
-    stage1_results, stage2_results, stage3_result, metadata = await run_full_council(
+    # Run the council process with cross-examination
+    stage1_results, stage1_5_results, stage2_results, stage3_result, metadata = await run_full_council(
         request.content
     )
 
@@ -120,12 +120,14 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         conversation_id,
         stage1_results,
         stage2_results,
-        stage3_result
+        stage3_result,
+        stage1_5=stage1_5_results
     )
 
     # Return the complete response with metadata
     return {
         "stage1": stage1_results,
+        "stage1_5": stage1_5_results,
         "stage2": stage2_results,
         "stage3": stage3_result,
         "metadata": metadata
@@ -161,6 +163,11 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             stage1_results = await stage1_collect_responses(request.content)
             yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
 
+            # Stage 1.5: Cross-examination
+            yield f"data: {json.dumps({'type': 'stage1_5_start'})}\n\n"
+            stage1_5_results = await stage1_5_cross_examination(request.content, stage1_results)
+            yield f"data: {json.dumps({'type': 'stage1_5_complete', 'data': stage1_5_results})}\n\n"
+
             # Stage 2: Collect rankings
             yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
             stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results)
@@ -183,7 +190,8 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 conversation_id,
                 stage1_results,
                 stage2_results,
-                stage3_result
+                stage3_result,
+                stage1_5=stage1_5_results
             )
 
             # Send completion event

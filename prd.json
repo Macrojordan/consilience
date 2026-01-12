@@ -1,0 +1,103 @@
+{
+  "project": "Consilience",
+  "branchName": "claude/enhance-llm-council-app-fIzDO",
+  "description": "Upgrade LLM Council to Consilience - SQLite storage, Stage 1.5 Cross-Examination, and Cyberpunk reskin",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "SQLite Adapter Implementation",
+      "description": "Replace the internals of backend/storage.py without changing its function signatures, ensuring seamless integration with backend/main.py.",
+      "acceptanceCriteria": [
+        "Create backend/database.py with sqlite3 connection and init_db() function",
+        "Schema: Create tables conversations (id, title, created_at) and messages (conversation_id, role, content, stage_data JSON)",
+        "Refactor backend/storage.py to query SQLite while keeping the same return structure",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed - SQLite storage now functional, all functions maintain backward compatibility"
+    },
+    {
+      "id": "US-002",
+      "title": "Update Assistant Message Signature",
+      "description": "Update add_assistant_message to support Stage 1.5 data with an optional stage1_5 argument.",
+      "acceptanceCriteria": [
+        "Update backend/storage.py signature to accept optional stage1_5 argument",
+        "Ensure stage1_5 data is persisted to the database",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed - add_assistant_message now accepts optional stage1_5 parameter and persists it to database"
+    },
+    {
+      "id": "US-003",
+      "title": "Dynamic Model Configuration",
+      "description": "Load COUNCIL_MODELS from environment variables instead of hardcoding in backend/config.py.",
+      "acceptanceCriteria": [
+        "Update backend/config.py to load COUNCIL_MODELS from .env JSON string",
+        "Update backend/council.py to use imported config variables",
+        "Verify backend/openrouter.py still functions",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed - COUNCIL_MODELS now loads from environment variable with JSON parsing and fallback to defaults"
+    },
+    {
+      "id": "US-004",
+      "title": "Implement Stage 1.5 (Cross-Examination)",
+      "description": "Add logic where models critique each other before final ranking.",
+      "acceptanceCriteria": [
+        "Create stage1_5_cross_examination function in backend/council.py",
+        "Logic sends prompt to each model to identify errors in other responses",
+        "Update run_full_council to call new stage between Stage 1 and Stage 2",
+        "Update backend/main.py to handle stage1_5 in send_message and send_message_stream"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed - Stage 1.5 cross-examination now runs between Stage 1 and Stage 2, models critique each other's responses"
+    },
+    {
+      "id": "US-005",
+      "title": "Frontend State Management (App.jsx)",
+      "description": "Update React app to handle new SSE events for Stage 1.5.",
+      "acceptanceCriteria": [
+        "Add stage1_5 state to assistantMessage object structure in App.jsx",
+        "Add case handlers for stage1_5_start and stage1_5_complete events",
+        "Verify state updates correctly during streaming",
+        "Verify in browser"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Completed - App.jsx now properly handles stage1_5 SSE events and maintains stage1_5 state in assistant messages"
+    },
+    {
+      "id": "US-006",
+      "title": "Frontend Rendering (ChatInterface.jsx)",
+      "description": "Display cross-examination results in the UI.",
+      "acceptanceCriteria": [
+        "Create frontend/src/components/Stage1_5.jsx to display critiques",
+        "Update ChatInterface.jsx to import and render Stage1_5 component",
+        "Pass stage1_5 data from message prop",
+        "Verify in browser"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Completed - Stage1_5 component created and integrated into ChatInterface, displays cross-examination critiques with tabbed interface"
+    },
+    {
+      "id": "US-007",
+      "title": "Consilience Cyberpunk Reskin",
+      "description": "Apply the new visual identity with cyberpunk theme.",
+      "acceptanceCriteria": [
+        "Update frontend/src/index.css with background #050505 and Cyber Green, Warm Amber, Electric Blue colors",
+        "Update frontend/src/components/Sidebar.jsx with glassmorphism/HUD look",
+        "Verify in browser that Control Deck vibe is achieved"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
