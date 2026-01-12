@@ -55,8 +55,8 @@
         "Update backend/main.py to handle stage1_5 in send_message and send_message_stream"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Stage 1.5 cross-examination now runs between Stage 1 and Stage 2, models critique each other's responses"
     },
     {
       "id": "US-005",

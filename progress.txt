@@ -8,6 +8,9 @@ Started: Sun, Jan 11, 2026  8:20:04 PM
 - Message stage data is stored as JSON in the stage_data column
 - Database connection uses row_factory for dict-like access to columns
 - Init_db() is called on module import in backend/database.py
+- Council process runs in stages: Stage 1 (collect responses), Stage 1.5 (cross-examination), Stage 2 (rankings), Stage 3 (synthesis)
+- run_full_council returns 5-tuple: (stage1, stage1_5, stage2, stage3, metadata)
+- Streaming endpoints emit events: stage1_start/complete, stage1_5_start/complete, stage2_start/complete, stage3_start/complete
 
 ## 2026-01-11 21:26:54 - US-001
 - Implemented SQLite adapter for conversation storage
@@ -47,4 +50,20 @@ Started: Sun, Jan 11, 2026  8:20:04 PM
   - Backend modules already use proper imports from config.py, no changes needed to consuming code
   - Server startup test confirms the dynamic configuration loads correctly at runtime
   - The backend/venv directory contains the Python virtual environment with all dependencies
+---
+## 2026-01-11 21:45:00 - US-004
+- Implemented Stage 1.5 (Cross-Examination) between Stage 1 and Stage 2
+- Created stage1_5_cross_examination function in backend/council.py that prompts each model to critique all responses
+- Updated run_full_council to return 5 values including stage1_5_results
+- Updated backend/main.py send_message endpoint to handle stage1_5 data
+- Updated backend/main.py send_message_stream endpoint to emit stage1_5_start and stage1_5_complete events
+- Updated storage.add_assistant_message calls to pass stage1_5 parameter
+- Files changed: backend/council.py, backend/main.py
+- **Learnings for future iterations:**
+  - Stage 1.5 runs after Stage 1 and before Stage 2 in the council process
+  - The cross-examination prompt shows model names (not anonymized) to encourage thorough critique
+  - Each council model receives all Stage 1 responses and provides critiques identifying errors, flaws, missing info, etc
+  - Stage 1.5 results are stored in the same stage_data JSON column as other stages
+  - The streaming endpoint emits stage1_5_start and stage1_5_complete events for real-time UI updates
+  - run_full_council now returns a 5-tuple: (stage1, stage1_5, stage2, stage3, metadata)
 ---
