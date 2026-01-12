@@ -79,12 +79,18 @@ def get_conversation(conversation_id: str) -> Optional[Dict[str, Any]]:
         else:  # assistant
             # Parse stage_data JSON
             stage_data = json.loads(msg_row["stage_data"]) if msg_row["stage_data"] else {}
-            messages.append({
+            assistant_message = {
                 "role": "assistant",
                 "stage1": stage_data.get("stage1", []),
                 "stage2": stage_data.get("stage2", []),
                 "stage3": stage_data.get("stage3", {})
-            })
+            }
+
+            # Include stage1_5 if present
+            if "stage1_5" in stage_data:
+                assistant_message["stage1_5"] = stage_data["stage1_5"]
+
+            messages.append(assistant_message)
 
     conn.close()
 
@@ -162,16 +168,18 @@ def add_assistant_message(
     conversation_id: str,
     stage1: List[Dict[str, Any]],
     stage2: List[Dict[str, Any]],
-    stage3: Dict[str, Any]
+    stage3: Dict[str, Any],
+    stage1_5: Optional[List[Dict[str, Any]]] = None
 ):
     """
-    Add an assistant message with all 3 stages to a conversation.
+    Add an assistant message with all stages to a conversation.
 
     Args:
         conversation_id: Conversation identifier
         stage1: List of individual model responses
         stage2: List of model rankings
         stage3: Final synthesized response
+        stage1_5: Optional list of cross-examination critiques
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -188,6 +196,9 @@ def add_assistant_message(
         "stage2": stage2,
         "stage3": stage3
     }
+
+    if stage1_5 is not None:
+        stage_data["stage1_5"] = stage1_5
 
     # Insert assistant message
     cursor.execute(
