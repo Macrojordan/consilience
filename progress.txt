@@ -1,0 +1,50 @@
+# Ralph Progress Log
+Started: Sun, Jan 11, 2026  8:20:04 PM
+---
+
+## Codebase Patterns
+- Backend uses SQLite for persistence with data/conversations/consilience.db
+- Storage layer maintains backward compatibility - all functions return dictionaries matching old JSON structure
+- Message stage data is stored as JSON in the stage_data column
+- Database connection uses row_factory for dict-like access to columns
+- Init_db() is called on module import in backend/database.py
+
+## 2026-01-11 21:26:54 - US-001
+- Implemented SQLite adapter for conversation storage
+- Created backend/database.py with connection management and schema initialization
+- Refactored backend/storage.py to use SQLite while maintaining identical API
+- Files changed: backend/database.py (new), backend/storage.py (refactored)
+- **Learnings for future iterations:**
+  - The storage layer API is now backed by SQLite but returns the exact same dictionary structures
+  - All SQL queries use parameterized statements for safety
+  - Database is automatically initialized on first import
+  - Messages table uses stage_data TEXT column to store JSON for stages 1-3
+  - The CASCADE delete ensures messages are cleaned up when conversations are deleted
+---
+
+## 2026-01-11 21:30:42 - US-002
+- Updated add_assistant_message signature to accept optional stage1_5 parameter
+- Modified stage_data JSON construction to include stage1_5 when provided
+- Updated get_conversation to return stage1_5 data from assistant messages
+- Files changed: backend/storage.py
+- **Learnings for future iterations:**
+  - The stage1_5 data follows same pattern as stage1/stage2/stage3 - stored in stage_data JSON column
+  - Optional parameters maintain backward compatibility with existing calls
+  - Assistant messages now support dynamic stage fields via conditional JSON construction
+  - get_conversation conditionally includes stage1_5 in response only when present in database
+---
+
+## 2026-01-11 21:36:59 - US-003
+- Implemented dynamic model configuration loading from environment variables
+- Updated backend/config.py to load COUNCIL_MODELS from COUNCIL_MODELS environment variable as JSON
+- Added JSON parsing with fallback to default model list if parsing fails or variable not set
+- Verified all backend modules (council.py, openrouter.py) already use imported config variables
+- Tested FastAPI server startup to confirm changes work correctly
+- Files changed: backend/config.py
+- **Learnings for future iterations:**
+  - COUNCIL_MODELS can now be configured via environment variable: `COUNCIL_MODELS='["model1", "model2"]'`
+  - Config module provides graceful fallback to default models if environment variable is missing or malformed
+  - Backend modules already use proper imports from config.py, no changes needed to consuming code
+  - Server startup test confirms the dynamic configuration loads correctly at runtime
+  - The backend/venv directory contains the Python virtual environment with all dependencies
+---
