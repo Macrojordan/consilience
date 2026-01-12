@@ -32,6 +32,69 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     return stage1_results
 
 
+async def stage1_5_cross_examination(
+    user_query: str,
+    stage1_results: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """
+    Stage 1.5: Cross-examination - each model critiques all other responses.
+
+    Args:
+        user_query: The original user query
+        stage1_results: Results from Stage 1
+
+    Returns:
+        List of dicts with 'model' and 'critiques' keys
+    """
+    # Create anonymized labels for responses (Response A, Response B, etc.)
+    labels = [chr(65 + i) for i in range(len(stage1_results))]  # A, B, C, ...
+
+    # Build the responses text with labels
+    responses_text = "\n\n".join([
+        f"Response {label} (from {result['model']}):\n{result['response']}"
+        for label, result in zip(labels, stage1_results)
+    ])
+
+    # Create the cross-examination prompt
+    cross_exam_prompt = f"""You are participating in a peer review process. Multiple AI models provided responses to the following question:
+
+Question: {user_query}
+
+Here are all the responses:
+
+{responses_text}
+
+Your task is to critically examine each response (including your own if present) and identify:
+1. Factual errors or inaccuracies
+2. Logical flaws or inconsistencies
+3. Missing important information
+4. Misleading statements
+
+For each response, provide a brief critique. Be specific and constructive. If a response is accurate and complete, say so.
+
+Format your response as follows:
+Response A: [your critique]
+Response B: [your critique]
+Response C: [your critique]
+(etc.)"""
+
+    messages = [{"role": "user", "content": cross_exam_prompt}]
+
+    # Get critiques from all council models in parallel
+    responses = await query_models_parallel(COUNCIL_MODELS, messages)
+
+    # Format results
+    stage1_5_results = []
+    for model, response in responses.items():
+        if response is not None:
+            stage1_5_results.append({
+                "model": model,
+                "critique": response.get('content', '')
+            })
+
+    return stage1_5_results
+
+
 async def stage2_collect_rankings(
     user_query: str,
     stage1_results: List[Dict[str, Any]]
@@ -293,25 +356,28 @@ Title:"""
     return title
 
 
-async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
+async def run_full_council(user_query: str) -> Tuple[List, List, List, Dict, Dict]:
     """
-    Run the complete 3-stage council process.
+    Run the complete council process with cross-examination.
 
     Args:
         user_query: The user's question
 
     Returns:
-        Tuple of (stage1_results, stage2_results, stage3_result, metadata)
+        Tuple of (stage1_results, stage1_5_results, stage2_results, stage3_result, metadata)
     """
     # Stage 1: Collect individual responses
     stage1_results = await stage1_collect_responses(user_query)
 
     # If no models responded successfully, return error
     if not stage1_results:
-        return [], [], {
+        return [], [], [], {
             "model": "error",
             "response": "All models failed to respond. Please try again."
         }, {}
+
+    # Stage 1.5: Cross-examination
+    stage1_5_results = await stage1_5_cross_examination(user_query, stage1_results)
 
     # Stage 2: Collect rankings
     stage2_results, label_to_model = await stage2_collect_rankings(user_query, stage1_results)
@@ -332,4 +398,4 @@ async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
         "aggregate_rankings": aggregate_rankings
     }
 
-    return stage1_results, stage2_results, stage3_result, metadata
+    return stage1_results, stage1_5_results, stage2_results, stage3_result, metadata
